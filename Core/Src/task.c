@@ -30,6 +30,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart){
 extern uint8_t Wave[2][4096];
 extern volatile uint8_t fp;
 extern int ccc;
+extern volatile uint8_t uartReciev_flag;
+
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 	if(huart -> Instance == USART2){
@@ -43,7 +46,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		//cnt = 16000;
 
 		//HAL_UART_Receive_DMA(&huart1, &Wave, 4096);
-
+		uartReciev_flag=1;
 	}
 
 

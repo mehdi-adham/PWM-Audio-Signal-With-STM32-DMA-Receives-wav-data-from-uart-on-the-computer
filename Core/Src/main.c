@@ -124,7 +124,8 @@ volatile uint8_t btn_flag = 1;
 uint8_t Wave[2][BLOCK];
 WavHeader_typedef headerInfo;
 
-volatile uint8_t Stop_flag=0;
+volatile uint8_t uartReciev_flag = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -139,29 +140,28 @@ static void MX_USART1_UART_Init(void);
 void Stop(void);
 void play(void);
 void pause(void);
-
+void Next(void);
+void Preview(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 void MyEvent1(DMA_HandleTypeDef *_hdma){
 
-	if((int)(headerInfo.DATA_SZ/4096) <= (int)(++NumOfBLOCK))
+	/*if((int)(headerInfo.DATA_SZ/4096) <= (int)(++NumOfBLOCK))
 	{
-		/*------*/
 		//Stop();
-		/*------*/
 	}
 
-	else{
+	else{*/
 		fp = 1-fp;
 
 		HAL_UART_Receive_DMA(&huart1, Wave[fp], BLOCK);
-		HAL_UART_Transmit(&huart1, (uint8_t *)"A", 1, 10);
+		HAL_UART_Transmit(&huart1, (uint8_t *)"A", 1, 100);
 
 		HAL_DMA_Abort(&hdma_tim4_ch1);
 		HAL_DMA_Start_IT(&hdma_tim4_ch1, (uint32_t)Wave[1-fp], (uint32_t) &(TIM2->CCR1), BLOCK);
-	}
+	//}
 
 }
 
@@ -169,6 +169,8 @@ void Stop(void){
 	btn_flag=1;
 	HAL_UART_Transmit(&huart1, (uint8_t *)"C", 1, 100);
 	NumOfBLOCK=0;
+
+	HAL_Delay(100);
 
 	for(int x=0 ;x<BLOCK ;x++){
 		Wave[0][x] = Wave[1][x] = 128; // bitRate/2
@@ -187,7 +189,7 @@ void play(void){
 		HAL_UART_Receive_DMA(&huart1, Wave[0], 45);
 		HAL_UART_Transmit(&huart1, (uint8_t *)"B", 1, 10);
 
-		HAL_Delay(10);
+		HAL_Delay(100);
 
 		headerInfo.RIFF_ID[0] = Wave[0][0];
 		headerInfo.RIFF_ID[1] = Wave[0][1];
@@ -235,10 +237,11 @@ void play(void){
 	{
 		HAL_UART_Receive_DMA(&huart1, Wave[0], BLOCK);
 		HAL_UART_Transmit(&huart1, (uint8_t *)"A", 1, 10);
-		HAL_Delay(50);
-	}
 
+		HAL_Delay(100);
+	}
 	fp = 1-fp;
+
 	HAL_UART_Receive_DMA(&huart1, Wave[fp], BLOCK);
 	HAL_UART_Transmit(&huart1, (uint8_t *)"A", 1, 10);
 
@@ -253,6 +256,40 @@ void pause(void){
 
 	TIM_CCxChannelCmd(TIM2, TIM_CHANNEL_1, TIM_CCx_DISABLE);
 	HAL_DMA_Abort(&hdma_tim4_ch1);
+}
+
+void Next(void){
+	btn_flag=1;
+	HAL_UART_Transmit(&huart1, (uint8_t *)"N", 1, 100);
+	NumOfBLOCK=0;
+
+	HAL_Delay(100);
+
+	for(int x=0 ;x<BLOCK ;x++){
+		Wave[0][x] = Wave[1][x] = 128; // bitRate/2
+	}
+
+	TIM_CCxChannelCmd(TIM2, TIM_CHANNEL_1, TIM_CCx_DISABLE);
+	HAL_DMA_Abort(&hdma_tim4_ch1);
+
+	play();
+}
+
+void Preview(void){
+	btn_flag=1;
+	HAL_UART_Transmit(&huart1, (uint8_t *)"P", 1, 100);
+	NumOfBLOCK=0;
+
+	HAL_Delay(100);
+
+	for(int x=0 ;x<BLOCK ;x++){
+		Wave[0][x] = Wave[1][x] = 128; // bitRate/2
+	}
+
+	TIM_CCxChannelCmd(TIM2, TIM_CHANNEL_1, TIM_CCx_DISABLE);
+	HAL_DMA_Abort(&hdma_tim4_ch1);
+
+	play();
 }
 
 /* USER CODE END 0 */
@@ -308,12 +345,22 @@ int main(void)
 	while (1)
 	{
 
+
+		//press Next button => Next
+		if (HAL_GPIO_ReadPin(Next_GPIO_Port, Next_Pin) == GPIO_PIN_RESET) {
+
+			Next();
+
+			HAL_Delay(200);
+		}
+
+
 		//press STOP button => STOP
 		if (HAL_GPIO_ReadPin(STOP_GPIO_Port, STOP_Pin) == GPIO_PIN_RESET) {
 
 			Stop();
 
-			HAL_Delay(150);
+			HAL_Delay(200);
 		}
 
 
@@ -323,7 +370,7 @@ int main(void)
 			btn_flag = 2;
 			play();
 
-			HAL_Delay(150);
+			HAL_Delay(200);
 		}
 
 		//press Play/Pause button => Pause
@@ -332,7 +379,7 @@ int main(void)
 			btn_flag = 4;
 			pause();
 
-			HAL_Delay(150);
+			HAL_Delay(200);
 		}
 
 		//release Play/Pause button
@@ -345,7 +392,7 @@ int main(void)
 			else if(btn_flag == 4)
 				btn_flag = 1;
 
-			HAL_Delay(150);
+			HAL_Delay(200);
 
 		}
 
@@ -589,11 +636,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(PLAY_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : STOP_Pin */
-  GPIO_InitStruct.Pin = STOP_Pin;
+  /*Configure GPIO pins : Next_Pin STOP_Pin */
+  GPIO_InitStruct.Pin = Next_Pin|STOP_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(STOP_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 

@@ -62,6 +62,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define PLAY_Pin GPIO_PIN_6
 #define PLAY_GPIO_Port GPIOA
+#define Next_Pin GPIO_PIN_10
+#define Next_GPIO_Port GPIOB
 #define STOP_Pin GPIO_PIN_11
 #define STOP_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
